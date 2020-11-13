@@ -1,0 +1,70 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/php:7.4-node-browsers
+
+    steps:
+      - checkout
+
+      - run:
+          name: "Prepare Environment"
+          command: |
+            sudo apt update
+            sudo docker-php-ext-install zip
+
+      - run:
+          name: "Create Environment file"
+          command: |
+            mv .env.testing .env
+
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "composer.json" }}
+            - v1-dependencies-
+
+      - run:
+          name: "Install Dependencies"
+          command: composer install -n --prefer-dist
+
+      - save_cache:
+          key: v1-dependencies-{{ checksum "composer.json" }}
+          paths:
+            - ./vendor
+
+      - restore_cache:
+          keys:
+            - node-v1-{{ checksum "package.json" }}
+            - node-v1-
+
+      - run: yarn install
+
+      - save_cache:
+          key: node-v1-{{ checksum "package.json" }}
+          paths:
+            - node_modules
+
+      - run:
+          name: "Generate App key"
+          command: php artisan key:generate
+
+      - run:
+          name: "Prepare the database"
+          command: |
+            touch storage/database.sqlite
+            php artisan migrate --env=testing --database=sqlite --force
+
+      - run:
+          name: "Run Unit Tests"
+          command: php artisan test
+
+workflows:
+  version: 2
+  automated_testing:
+    jobs:
+      - build:
+          filters:
+            branches:
+              only:
+                - develop
+                - feature/*

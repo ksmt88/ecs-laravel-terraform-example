@@ -1,0 +1,41 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      docker: 19
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - $(aws ecr get-login --region ap-northeast-1 --no-include-email)
+      - IMAGE_NAME_APP=${PROJECT_NAME}-app
+      - IMAGE_NAME_WEB=${PROJECT_NAME}-web
+      - REPOSITORY_URI_APP=${AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-1.amazonaws.com/${IMAGE_NAME_APP}
+      - REPOSITORY_URI_WEB=${AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-1.amazonaws.com/${IMAGE_NAME_WEB}
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - APP_IMAGE_TAG=${COMMIT_HASH:=latest}
+      - WEB_IMAGE_TAG=1.0.0
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...
+      - docker build -t ${REPOSITORY_URI_APP}:latest . -f ./infra/docker/app/Dockerfile
+      #- docker build -t ${REPOSITORY_URI_WEB}:latest . -f ./infra/docker/web/Dockerfile
+      - docker tag ${REPOSITORY_URI_APP}:latest ${REPOSITORY_URI_APP}:$APP_IMAGE_TAG
+      #- docker tag ${REPOSITORY_URI_WEB}:latest ${REPOSITORY_URI_WEB}:$WEB_IMAGE_TAG
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker images...
+      - docker push ${REPOSITORY_URI_APP}:latest
+      - docker push ${REPOSITORY_URI_APP}:$APP_IMAGE_TAG
+      #- docker push ${REPOSITORY_URI_WEB}:latest
+      #- docker push ${REPOSITORY_URI_WEB}:$WEB_IMAGE_TAG
+      - echo Writing image definitions file...
+      - cat appspec-template.yaml | sed -e s@\<IMAGE_NAME_WEB\>@$IMAGE_NAME_WEB@ > appspec.yaml
+      - cat taskdef-template.json | sed -e s@\<PROJECT_NAME\>@$PROJECT_NAME@ -e s@\<IMAGE_NAME_WEB\>@$IMAGE_NAME_WEB@ -e s@\<IMAGE_NAME_APP\>@$IMAGE_NAME_APP@ -e s@\<REPOSITORY_URI_WEB\>@$REPOSITORY_URI_WEB:$WEB_IMAGE_TAG@ -e s@\<REPOSITORY_URI_APP\>@$REPOSITORY_URI_APP:$APP_IMAGE_TAG@ -e s@\<AWS_ACCOUNT_ID\>@$AWS_ACCOUNT_ID@ > taskdef.json
+artifacts:
+  files:
+    - appspec.yaml
+    - taskdef.json

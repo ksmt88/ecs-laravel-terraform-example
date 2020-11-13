@@ -1,0 +1,49 @@
+{
+    "family": "<PROJECT_NAME>",
+    "networkMode": "awsvpc",
+    "containerDefinitions": [
+        {
+            "name": "<IMAGE_NAME_WEB>",
+            "image": "<REPOSITORY_URI_WEB>",
+            "portMappings": [
+                {
+                    "containerPort": 80,
+                    "protocol": "tcp"
+                }
+            ],
+            "dependsOn": [
+                {
+                    "containerName": "<IMAGE_NAME_APP>",
+                    "condition": "START"
+                }
+            ],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/<IMAGE_NAME_WEB>",
+                    "awslogs-region": "ap-northeast-1",
+                    "awslogs-stream-prefix": "<IMAGE_NAME_WEB>"
+                }
+            }
+        },
+        {
+            "name": "<IMAGE_NAME_APP>",
+            "image": "<REPOSITORY_URI_APP>",
+            "essential": true,
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/<IMAGE_NAME_APP>",
+                    "awslogs-region": "ap-northeast-1",
+                    "awslogs-stream-prefix": "<IMAGE_NAME_APP>"
+                }
+            }
+        }
+    ],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "256",
+    "memory": "1024",
+    "executionRoleArn": "arn:aws:iam::<AWS_ACCOUNT_ID>:role/ecsTaskExecutionRole"
+}
