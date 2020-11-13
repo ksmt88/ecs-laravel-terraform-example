@@ -8,6 +8,6 @@ terraform {
 }
 
 provider "aws" {
-  profile = "private"
+  profile = "default"
   region  = "ap-northeast-1"
 }

@@ -13,7 +13,7 @@ PROJECT_NAME=${NAME}-${input}
 CONTAINER=('web' 'app')
 IMAGE_VERSION=1.0.0
 DOCKERFILE_PATH=./infra/docker/
-AWS_ACCOUNT_ID=$(aws sts get-caller-identity --profile private | sed -n 's|.*"Account": "\([^"]*\)".*|\1|p')
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity | sed -n 's|.*"Account": "\([^"]*\)".*|\1|p')
 REPOSITORY_URL=${AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-1.amazonaws.com
 
 aws ecr get-login-password --profile private | docker login --username AWS --password-stdin https://${REPOSITORY_URL}
